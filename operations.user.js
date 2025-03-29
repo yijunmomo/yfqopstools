@@ -4,7 +4,6 @@
 // @version      0.1
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
 // @author       You
-// @match        *://*/*
 // @match        https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin*
 // @downloadURL  https://raw.githubusercontent.com/your-org/tm-scripts/main/scripts/operations.user.js
 // @updateURL    https://raw.githubusercontent.com/your-org/tm-scripts/main/scripts/operations.user.js
