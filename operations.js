@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Iframe Admin 操作脚本
+// @name         ECENTIME Admin 助手
 // @namespace    http://tampermonkey.net/
 // @version      0.1
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
