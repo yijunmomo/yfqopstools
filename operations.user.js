@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ECENTIME Admin 助手
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      1.0
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
 // @author       You
 // @match        https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin*
@@ -18,19 +18,43 @@
         const iframes = document.getElementsByTagName('iframe');
         for (let iframe of iframes) {
             const src = iframe.getAttribute('src');
-            if (src && src.includes('index.php?g=admin&m=post&a=edit')) {
-                if (iframe.contentWindow && iframe.contentDocument.readyState === 'complete') {
-                    performDomOperations(iframe.contentDocument);
-                } else {
-                    iframe.addEventListener('load', () => performDomOperations(iframe.contentDocument));
+            if (src) {
+                try {
+                    const url = new URL(src, window.location.origin);  // 兼容相对路径
+                    const params = new URLSearchParams(url.search);
+
+                    if (
+                        params.get('g') === 'admin' &&
+                        params.get('m') === 'post' &&
+                        ['add', 'edit'].includes(params.get('a'))
+                    ) {
+                        if (iframe.contentWindow && iframe.contentDocument.readyState === 'complete') {
+                            performDomOperations(iframe.contentDocument);
+                        } else {
+                            iframe.addEventListener('load', () => performDomOperations(iframe.contentDocument));
+                        }
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('URL 解析失败:', e);
                 }
-                return;
             }
         }
 
         // 如果未找到符合条件的 iframe，则对当前页面进行操作
-        if(document.location.href.includes('index.php?g=admin&m=post&a=edit')){
-            performDomOperations(document);
+        try {
+            const url = new URL(window.location.href);  // 当前页面 URL
+            const params = new URLSearchParams(url.search);
+
+            if (
+                params.get('g') === 'admin' &&
+                params.get('m') === 'post' &&
+                ['edit', 'add'].includes(params.get('a'))
+            ) {
+                performDomOperations(document);
+            }
+        } catch (e) {
+            console.warn('页面 URL 解析失败:', e);
         }
     }
 
@@ -55,7 +79,6 @@
                 btn.onclick = onCustomButtonClick;
                 targetTable.parentNode.insertBefore(btn, targetTable.nextSibling);
 
-
                 // 添加“获取单品链接”按钮
                 const singleBtn = doc.createElement('button');
                 singleBtn.innerText = '获取单品链接';
@@ -65,6 +88,13 @@
 
                 btn.parentNode.insertBefore(singleBtn, btn.nextSibling);
 
+                const mallBtn = doc.createElement('button');
+                mallBtn.innerText = '寻找商城卖点';
+                mallBtn.style.margin = '10px';
+                mallBtn.style.display = 'block';
+                mallBtn.onclick = onFindMallSellingPoints;
+
+                singleBtn.parentNode.insertBefore(mallBtn, singleBtn.nextSibling);
             }
         } catch (e) {
             console.error('DOM 操作失败:', e);
@@ -230,6 +260,23 @@
         // 插入展示到当前按钮下方
         event.target.parentNode.insertBefore(resultContainer, event.target.nextSibling);
     }
+
+    function onFindMallSellingPoints(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const doc = event.target.ownerDocument;
+        const select = doc.querySelector('select[name="mall_id"]');
+        if (!select) {
+            alert('未找到 mall_id 下拉框');
+            return;
+        }
+        const mallId = select.value;
+        const code = 'gSn7C@^7P^K4F03i';
+        const url = `https://aitools.yifenqian.fr/view_sp_html?mall_id=${mallId}&code=${encodeURIComponent(code)}`;
+        window.open(url, '_blank');
+    }
+
     // 初始化
     waitForIframeAndInject();
 })();
