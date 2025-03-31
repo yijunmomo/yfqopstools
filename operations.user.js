@@ -63,38 +63,40 @@
         try {
             if (!doc) return;
 
-            // 示例操作：改变标题内容
-            const titleEl = doc.querySelector('h1');
-            if (titleEl) {
-                titleEl.textContent = '[Tampermonkey 插件已注入] ' + titleEl.textContent;
-            }
-
-            // 插入按钮到指定元素内
+            // 添加“获取相关链接”按钮
             const targetTable = doc.querySelector('#info_form table.table_form.inner_table');
             if (targetTable) {
-                const btn = doc.createElement('button');
-                btn.innerText = '获取富文本链接';
-                btn.style.margin = '10px';
-                btn.style.display = 'block';
-                btn.onclick = onCustomButtonClick;
-                targetTable.parentNode.insertBefore(btn, targetTable.nextSibling);
+                const relatedBtn = doc.createElement('button');
+                relatedBtn.innerText = '获取相关链接';
+                relatedBtn.style.margin = '10px';
+                relatedBtn.style.display = 'block';
+                relatedBtn.style.width = '100%';
+                relatedBtn.onclick = onGetRelatedLinks;
+                targetTable.parentNode.insertBefore(relatedBtn, targetTable.nextSibling);
 
-                // 添加“获取单品链接”按钮
                 const singleBtn = doc.createElement('button');
                 singleBtn.innerText = '获取单品链接';
                 singleBtn.style.margin = '10px';
                 singleBtn.style.display = 'block';
+                singleBtn.style.width = '100%';
                 singleBtn.onclick = onGetSingleProductLinks;
+                relatedBtn.parentNode.insertBefore(singleBtn, relatedBtn.nextSibling);
 
-                btn.parentNode.insertBefore(singleBtn, btn.nextSibling);
+                const richTextBtn = doc.createElement('button');
+                richTextBtn.innerText = '获取富文本链接';
+                richTextBtn.style.margin = '10px';
+                richTextBtn.style.display = 'block';
+                richTextBtn.style.width = '100%';
+                richTextBtn.onclick = onRichTextBtnClick;
+                singleBtn.parentNode.insertBefore(richTextBtn, singleBtn.nextSibling);
 
                 const mallBtn = doc.createElement('button');
                 mallBtn.innerText = '寻找商城卖点';
                 mallBtn.style.margin = '10px';
                 mallBtn.style.display = 'block';
+                mallBtn.style.width = '100%';
                 mallBtn.onclick = onFindMallSellingPoints;
-
-                singleBtn.parentNode.insertBefore(mallBtn, singleBtn.nextSibling);
+                richTextBtn.parentNode.insertBefore(mallBtn, richTextBtn.nextSibling);
             }
         } catch (e) {
             console.error('DOM 操作失败:', e);
@@ -102,7 +104,7 @@
     }
 
     // 自定义按钮点击处理函数
-    function onCustomButtonClick(event) {
+    function onRichTextBtnClick(event) {
         event.preventDefault(); // 阻止默认提交
         event.stopPropagation(); // 阻止冒泡行为
 
@@ -154,7 +156,7 @@
                 });
 
                 const addButton = doc.createElement('button');
-                addButton.innerText = '添至相关链接';
+                addButton.innerText = '👆加相关链接';
                 addButton.onclick = (event) => onAddRelatedLinkClick(event, href, linkText);
 
                 line.appendChild(anchor);
@@ -224,7 +226,7 @@
                 const nameInput = product.querySelector('input[name="moreSimpleProductName[]"]');
 
                 const href = linkInput ? linkInput.value : '';
-                const linkText = `单品|${(nameInput && nameInput.value.trim()) || '单品|'}`;
+                const linkText = `${(nameInput && nameInput.value.trim()) || ''}`;
 
                 if (!href) return;
 
@@ -238,20 +240,29 @@
                 anchor.style.cursor = 'pointer';
                 anchor.style.color = '#007bff';
                 anchor.style.textDecoration = 'underline';
-                anchor.addEventListener('click', (e) => {
+
+                const copyButton = doc.createElement('button');
+                copyButton.innerText = '复制链接';
+                copyButton.onclick = (e) => {
                     e.preventDefault();
-                    navigator.clipboard.writeText(href).then(() => {
-                        console.log('链接已复制到剪贴板:\n' + href);
+                    e.stopPropagation();
+                    const formattedLink = `<a target="_blank" rel="noopener noreferrer" href="${href}">${linkText}&nbsp;&gt;&gt;</a>`;
+                    const blob = new Blob([formattedLink], { type: 'text/html' });
+                    const data = [new ClipboardItem({ 'text/html': blob })];
+                    navigator.clipboard.write(data).then(() => {
+                        console.log('格式化链接已复制到剪贴板:\n' + formattedLink);
                     }).catch(err => {
                         console.error('复制失败:', err);
                     });
-                });
+                };
 
                 const addButton = doc.createElement('button');
-                addButton.innerText = '添至相关链接';
-                addButton.onclick = (e) => onAddRelatedLinkClick(e, href, linkText);
+                addButton.innerText = '👆加相关链接';
+                addButton.style.marginLeft = '10px';
+                addButton.onclick = (e) => onAddRelatedLinkClick(e, href, `单品|${linkText}`);
 
                 line.appendChild(anchor);
+                line.appendChild(copyButton);
                 line.appendChild(addButton);
                 resultContainer.appendChild(line);
             });
@@ -275,6 +286,73 @@
         const code = 'gSn7C@^7P^K4F03i';
         const url = `https://aitools.yifenqian.fr/view_sp_html?mall_id=${mallId}&code=${encodeURIComponent(code)}`;
         window.open(url, '_blank');
+    }
+
+    function onGetRelatedLinks(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const doc = event.target.ownerDocument;
+        const containers = doc.querySelectorAll('div.linksList');
+        if (!containers.length) {
+            alert('未找到 .linksList 容器');
+            return;
+        }
+
+        let resultContainer = doc.querySelector('#tampermonkey-related-links');
+        if (resultContainer) {
+            resultContainer.remove();
+        }
+        resultContainer = doc.createElement('div');
+        resultContainer.id = 'tampermonkey-related-links';
+        resultContainer.style.margin = '10px 0';
+
+        containers.forEach(container => {
+            const items = container.querySelectorAll('div.post_link_list');
+            items.forEach(item => {
+                const linkInput = item.querySelector('input[name="moreOriLink[]"]');
+                const textInput = item.querySelector('input[name="moreDes[]"]');
+
+                const href = linkInput ? linkInput.value : '';
+                const text = textInput ? textInput.value : '';
+
+                if (!href || !text) return;
+
+                const line = doc.createElement('div');
+                line.style.margin = '4px 8px';
+
+                const anchor = doc.createElement('a');
+                anchor.href = href;
+                anchor.target = '_blank';
+                anchor.rel = 'noopener noreferrer';
+                anchor.innerText = `${text}>>`;
+                anchor.style.marginRight = '10px';
+                anchor.style.cursor = 'pointer';
+                anchor.style.color = '#007bff';
+                anchor.style.textDecoration = 'underline';
+
+                const copyButton = doc.createElement('button');
+                copyButton.innerText = '复制链接';
+                copyButton.onclick = (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const formattedLink = `<a target="_blank" rel="noopener noreferrer" href="${href}">${text}&nbsp;&gt;&gt;</a>`;
+                    const blob = new Blob([formattedLink], { type: 'text/html' });
+                    const data = [new ClipboardItem({ 'text/html': blob })];
+                    navigator.clipboard.write(data).then(() => {
+                        console.log('格式化链接已复制到剪贴板:\n' + formattedLink);
+                    }).catch(err => {
+                        console.error('复制失败:', err);
+                    });
+                };
+
+                line.appendChild(anchor);
+                line.appendChild(copyButton);
+                resultContainer.appendChild(line);
+            });
+        });
+
+        event.target.parentNode.insertBefore(resultContainer, event.target.nextSibling);
     }
 
     // 初始化
