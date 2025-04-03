@@ -283,8 +283,10 @@
             return;
         }
         const mallId = select.value;
+        const brandSelect = doc.querySelector('#brands');
+        const brandId = brandSelect ? brandSelect.value : '';
         const code = 'gSn7C@^7P^K4F03i';
-        const url = `https://aitools.yifenqian.fr/view_sp_html?mall_id=${mallId}&code=${encodeURIComponent(code)}`;
+        const url = `https://aitools.yifenqian.fr/view_sp_html?mall_id=${mallId}&brand_id=${brandId}&code=${encodeURIComponent(code)}`;
         window.open(url, '_blank');
     }
 
