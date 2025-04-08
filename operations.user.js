@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ECENTIME Admin 助手
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
 // @author       You
 // @match        https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin*
@@ -125,8 +125,8 @@
         resultContainer.style.margin = '10px 0';
 
         // 提取链接（使用 DOMParser 解析 HTML）
-        const parser = new DOMParser();
-        const htmlDoc = parser.parseFromString(textarea.value, 'text/html');
+        const editor = window.editor;
+        const htmlDoc = new DOMParser().parseFromString(editor.getData(), 'text/html');
         const links = htmlDoc.querySelectorAll('a[href]');
 
         if (links.length === 0) {
