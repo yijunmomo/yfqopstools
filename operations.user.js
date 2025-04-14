@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ECENTIME Admin 助手
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
 // @author       You
 // @match        https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin*
@@ -15,35 +15,9 @@
 
     // 等待 iframe 加载
     function waitForIframeAndInject() {
-        const iframes = document.getElementsByTagName('iframe');
-        for (let iframe of iframes) {
-            const src = iframe.getAttribute('src');
-            if (src) {
-                try {
-                    const url = new URL(src, window.location.origin);  // 兼容相对路径
-                    const params = new URLSearchParams(url.search);
-
-                    if (
-                        params.get('g') === 'admin' &&
-                        params.get('m') === 'post' &&
-                        ['add', 'edit'].includes(params.get('a'))
-                    ) {
-                        if (iframe.contentWindow && iframe.contentDocument.readyState === 'complete') {
-                            performDomOperations(iframe.contentDocument);
-                        } else {
-                            iframe.addEventListener('load', () => performDomOperations(iframe.contentDocument));
-                        }
-                        return;
-                    }
-                } catch (e) {
-                    console.warn('URL 解析失败:', e);
-                }
-            }
-        }
-
         // 如果未找到符合条件的 iframe，则对当前页面进行操作
         try {
-            const url = new URL(window.location.href);  // 当前页面 URL
+            const url = window.location;  // 直接用现有 location 对象
             const params = new URLSearchParams(url.search);
 
             if (
@@ -51,7 +25,9 @@
                 params.get('m') === 'post' &&
                 ['edit', 'add'].includes(params.get('a'))
             ) {
-                performDomOperations(document);
+                window.addEventListener('load', () => {
+                    performDomOperations(document);
+                });
             }
         } catch (e) {
             console.warn('页面 URL 解析失败:', e);
