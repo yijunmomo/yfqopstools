@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         ECENTIME Admin 助手
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
 // @author       You
 // @match        https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin*
 // @downloadURL  https://raw.githubusercontent.com/your-org/tm-scripts/main/scripts/operations.user.js
 // @updateURL    https://raw.githubusercontent.com/your-org/tm-scripts/main/scripts/operations.user.js
-// @grant        none
+// @grant        unsafeWindow
 // ==/UserScript==
 
 (function () {
@@ -19,14 +19,17 @@
         try {
             const url = window.location;  // 直接用现有 location 对象
             const params = new URLSearchParams(url.search);
+            const g = params.get('g');
+            const m = params.get('m');
+            const a = params.get('a');
 
-            if (
-                params.get('g') === 'admin' &&
-                params.get('m') === 'post' &&
-                ['edit', 'add'].includes(params.get('a'))
-            ) {
+            if (g === 'admin' && m === 'post') {
                 window.addEventListener('load', () => {
-                    performDomOperations(document);
+                    if (['edit', 'add'].includes(a)) {
+                        performDomOperations(document);
+                    } else if (a === 'post_time_publish') {
+                        performPostTimeScheduleOperations(document);
+                    }
                 });
             }
         } catch (e) {
@@ -331,6 +334,99 @@
         });
 
         event.target.parentNode.insertBefore(resultContainer, event.target.nextSibling);
+    }
+
+    // 新增函数
+    function performPostTimeScheduleOperations(doc) {
+        try {
+            if (!doc) return;
+            console.log('执行 post_time_publish 页面操作');
+
+            // 获取第一个非 search_form 的 table
+            const table = Array.from(doc.querySelectorAll('table'))
+                .find(table => !table.classList.contains('search_form'));
+
+            if (!table) return;
+
+            const rows = Array.from(table.querySelectorAll('tr'));
+            rows.forEach(row => {
+                const tds = Array.from(row.querySelectorAll('td'));
+                tds.forEach((td, index) => {
+                    if (index < 2) return; // 跳过前两列
+
+                    const isEmpty = td.innerHTML.trim() === '';
+                    const hasNoPostClass = !td.classList.contains('no_post');
+
+                    if (isEmpty && hasNoPostClass) {
+                        const dateInput = doc.querySelector('form[name="searchform"] input[name="date"]');
+                        const date = dateInput ? dateInput.value : '';
+                        const timeCell = row.querySelector('td');
+                        const timeText = timeCell ? timeCell.textContent.trim() : '';
+                        const fullDateTime = `${date} ${timeText}`;
+
+                        const link = doc.createElement('a');
+                        link.href = 'javascript:void(0);';
+                        link.setAttribute('data-title', '添加顶置任务');
+                        link.setAttribute('data-before', '');
+                        link.setAttribute('data-time', fullDateTime);
+                        link.textContent = '添加顶置任务';
+
+                        link.addEventListener('click', onTopTaskLinkClick);
+
+                        td.innerHTML = '';
+                        td.appendChild(link);
+                    }
+                });
+            });
+
+        } catch (e) {
+            console.error('post_time_publish DOM 操作失败:', e);
+        }
+    }
+
+    function onTopTaskLinkClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const time = event.currentTarget.getAttribute('data-time') || '';
+        const title = event.currentTarget.getAttribute('data-title') || '';
+        unsafeWindow.$.dialog({
+            title: title,
+        content: `
+      <div class="dialog_content">
+          <form id="tm-schedule-form" action="/yifenqian_zdm_admin/index.php?g=admin&m=schedule_task&a=add" method="post">
+              <label>折扣 ID: <input type="text" name="post_id" required></label><br>
+              <input type="hidden" name="type" value="0">
+              <input type="hidden" name="commentator" value="69421">
+              <input type="hidden" name="discount_status" value="0">
+              <input type="hidden" name="ajax" value="1">
+              <input type="hidden" name="status" value="1">
+              <input type="hidden" name="schedule_time" value="${time}">
+          </form>
+      </div>
+  `,
+            okValue: '确定',
+            ok: function () {
+                const form = document.getElementById('tm-schedule-form');
+                if (!form) return;
+
+                const formData = new FormData(form);
+                fetch(form.action, {
+                    method: form.method,
+                    body: formData,
+                    credentials: 'include'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('提交成功:', data);
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('提交失败:', error);
+                    alert('提交失败');
+                });
+            }
+        });
     }
 
     // 初始化
