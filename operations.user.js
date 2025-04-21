@@ -37,10 +37,19 @@
         }
     }
 
+    let domOperated = false;
     // 执行 DOM 操作（通用）
     function performDomOperations(doc) {
         try {
             if (!doc) return;
+
+            if (domOperated) {
+                console.log('Already performed, skip.');
+                return; // ✅ 如果已经执行过，就不再继续
+            }
+            domOperated = true; // ✅ 标记为已执行
+
+            console.log('performDomOperations running...');
 
             // 添加“获取相关链接”按钮
             const targetTable = doc.querySelector('#info_form table.table_form.inner_table');
@@ -104,7 +113,7 @@
         resultContainer.style.margin = '10px 0';
 
         // 提取链接（使用 DOMParser 解析 HTML）
-        const editor = window.editor;
+        const editor = unsafeWindow.editor;
         const htmlDoc = new DOMParser().parseFromString(editor.getData(), 'text/html');
         const links = htmlDoc.querySelectorAll('a[href]');
 
@@ -154,9 +163,16 @@
         event.stopPropagation(); // 阻止冒泡行为
 
         const doc = document;
-        const container = doc.querySelector('.linksList');
+        let container = doc.querySelector('.linksList');
         if (!container) {
-            alert('未找到 .linksList 容器');
+            console.warn('未找到 .linksList，尝试寻找 td.post_link_box #sortable');
+            const td = doc.querySelector('td.post_link_box');
+            if (td) {
+                container = td.querySelector('#sortable');
+            }
+        }
+        if (!container) {
+            alert('未找到添加链接的容器');
             return;
         }
 
