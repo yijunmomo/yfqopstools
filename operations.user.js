@@ -23,7 +23,6 @@
             const m = params.get('m');
             const a = params.get('a');
             const menuid = params.get('menuid');
-            const collect_flag = params.get('collect_flag');
 
             if (g === 'admin' && m === 'post') {
                 window.addEventListener('load', () => {
@@ -31,7 +30,7 @@
                         performDomOperations(document);
                     } else if (a === 'post_time_publish') {
                         performPostTimeScheduleOperations(document);
-                    } else if (a === 'index_all' && menuid === '471' && collect_flag === '1') {
+                    } else if (a === 'index_all' && menuid === '471') {
                         performPostIndexOperations(document);
                     }
                 });
