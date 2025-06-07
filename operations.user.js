@@ -22,6 +22,8 @@
             const g = params.get('g');
             const m = params.get('m');
             const a = params.get('a');
+            const menuid = params.get('menuid');
+            const collect_flag = params.get('collect_flag');
 
             if (g === 'admin' && m === 'post') {
                 window.addEventListener('load', () => {
@@ -29,6 +31,8 @@
                         performDomOperations(document);
                     } else if (a === 'post_time_publish') {
                         performPostTimeScheduleOperations(document);
+                    } else if (a === 'index_all' && menuid === '471' && collect_flag === '1') {
+                        performPostIndexOperations(document);
                     }
                 });
             }
@@ -51,7 +55,7 @@
 
             console.log('performDomOperations running...');
 
-            // 添加“获取相关链接”按钮
+            // 添加"获取相关链接"按钮
             const targetTable = doc.querySelector('#info_form table.table_form.inner_table');
             if (targetTable) {
                 const relatedBtn = doc.createElement('button');
@@ -157,7 +161,7 @@
         event.target.parentNode.insertBefore(resultContainer, event.target.nextSibling);
     }
 
-    // 处理“添加至相关链接”的点击逻辑
+    // 处理"添加至相关链接"的点击逻辑
     function onAddRelatedLinkClick(event, link, text = '') {
         event.preventDefault(); // 阻止默认提交
         event.stopPropagation(); // 阻止冒泡行为
@@ -443,6 +447,51 @@
                 });
             }
         });
+    }
+
+    // 新增函数：处理文章列表页面
+    function performPostIndexOperations(doc) {
+        try {
+            if (!doc) return;
+
+            if (domOperated) {
+                console.log('Already performed, skip.');
+                return;
+            }
+            domOperated = true;
+
+            const tableListDiv = doc.querySelector('div.table_list');
+            if (!tableListDiv) return;
+
+            const table = tableListDiv.querySelector('table');
+            if (!table) return;
+
+            const rows = table.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                const lastTd = row.querySelector('td:last-child');
+                if (!lastTd) return;
+
+                // 获取第二个td中的链接文本（dealId）
+                const secondTd = row.querySelector('td:nth-child(2)');
+                if (!secondTd) return;
+
+                const dealIdLink = secondTd.querySelector('a');
+                if (!dealIdLink) return;
+                const dealId = dealIdLink.textContent.trim();
+
+                // 创建评论链接
+                const commentLink = doc.createElement('a');
+                const commentUrl = `https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin&m=post&a=comments&id=${dealId}`;
+                commentLink.href = commentUrl;
+                commentLink.textContent = ' | 评论';
+
+                // 添加到最后一个td中
+                lastTd.appendChild(commentLink);
+            });
+        } catch (e) {
+            console.error('❌ post index DOM 操作失败:', e);
+        }
     }
 
     // 初始化
