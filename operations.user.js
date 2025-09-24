@@ -26,7 +26,7 @@
 
             if (g === 'admin' && m === 'post') {
                 window.addEventListener('load', () => {
-                    if (['edit', 'add'].includes(a)) {
+                    if (['edit', 'add', 'add_ai'].includes(a)) {
                         performDomOperations(document);
                     } else if (a === 'post_time_publish') {
                         performPostTimeScheduleOperations(document);
