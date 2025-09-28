@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ECENTIME Admin 助手
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.5
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
 // @author       You
 // @match        https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin*
@@ -88,6 +88,42 @@
                 mallBtn.style.width = '100%';
                 mallBtn.onclick = onFindMallSellingPoints;
                 richTextBtn.parentNode.insertBefore(mallBtn, richTextBtn.nextSibling);
+            }
+
+            // 在简易单品标题下添加激活链接编辑按钮
+            // 首先查找所有包含simpleProductContainer的tr
+            const simpleProductTds = doc.querySelectorAll('td.simpleProductContainer');
+            let found = false;
+            
+            for (let td of simpleProductTds) {
+                const tr = td.closest('tr');
+                if (!tr) continue;
+                
+                // 在同一个tr中查找包含"简易单品"的th
+                const thInSameRow = tr.querySelector('th');
+                if (thInSameRow && thInSameRow.textContent.includes('简易单品')) {
+                    addEditButtonToSimpleProduct(doc, thInSameRow);
+                    found = true;
+                    break;
+                }
+            }
+            
+            // 如果上述方法都没找到，使用原来的方法作为备选
+            if (!found) {
+                const thElements = doc.querySelectorAll('th');
+                for (let th of thElements) {
+                    if (th.textContent.includes('简易单品')) {
+                        // 检查这个th是否与simpleProductContainer相关
+                        const tr = th.closest('tr');
+                        if (tr) {
+                            const nextTr = tr.nextElementSibling;
+                            if (nextTr && nextTr.querySelector('td.simpleProductContainer')) {
+                                addEditButtonToSimpleProduct(doc, th);
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         } catch (e) {
             console.error('DOM 操作失败:', e);
@@ -491,6 +527,58 @@
         } catch (e) {
             console.error('❌ post index DOM 操作失败:', e);
         }
+    }
+
+    // 在简易单品标题下添加激活链接编辑按钮
+    function addEditButtonToSimpleProduct(doc, thElement) {
+        try {
+            // 检查th元素是否已经包含按钮，避免重复添加
+            if (thElement.querySelector('.tm-edit-button')) {
+                return;
+            }
+
+            // 创建换行符
+            const br = doc.createElement('br');
+            
+            // 创建按钮
+            const editBtn = doc.createElement('button');
+            editBtn.className = 'tm-edit-button';
+            editBtn.innerText = '激活链接编辑';
+            editBtn.style.margin = '3px 0';
+            editBtn.style.padding = '2px 6px';
+            editBtn.style.fontSize = '12px';
+            editBtn.style.cursor = 'pointer';
+            editBtn.onclick = onActivateLinkEdit;
+
+            // 将换行符和按钮添加到th元素中
+            thElement.appendChild(br);
+            thElement.appendChild(editBtn);
+        } catch (e) {
+            console.error('添加激活链接编辑按钮失败:', e);
+        }
+    }
+
+    // 激活链接编辑按钮点击处理
+    function onActivateLinkEdit(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const doc = event.target.ownerDocument;
+        const button = event.target;
+        
+        // 查找所有class为fast_created_product的元素下的readonly input
+        const fastCreatedProducts = doc.querySelectorAll('.fast_created_product');
+        let editedCount = 0;
+
+        fastCreatedProducts.forEach(product => {
+            const readonlyInputs = product.querySelectorAll('input[readonly]');
+            readonlyInputs.forEach(input => {
+                input.removeAttribute('readonly');
+                editedCount++;
+            });
+        });
+
+        console.log(`已激活 ${editedCount} 个输入框的编辑功能`);
     }
 
     // 初始化
