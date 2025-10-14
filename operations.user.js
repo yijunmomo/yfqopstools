@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ECENTIME Admin 助手
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.3
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
 // @author       You
 // @match        https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin*
@@ -88,6 +88,15 @@
                 mallBtn.style.width = '100%';
                 mallBtn.onclick = onFindMallSellingPoints;
                 richTextBtn.parentNode.insertBefore(mallBtn, richTextBtn.nextSibling);
+
+                const brandBtn = doc.createElement('button');
+                brandBtn.innerText = '寻找品牌卖点';
+                brandBtn.style.margin = '10px';
+                brandBtn.style.display = 'block';
+                brandBtn.style.width = '100%';
+                brandBtn.onclick = onFindBrandSellingPoints;
+                mallBtn.parentNode.insertBefore(brandBtn, mallBtn.nextSibling);
+                
             }
 
             // 在简易单品标题下添加激活链接编辑按钮
@@ -321,6 +330,26 @@
         const brandId = brandSelect ? brandSelect.value : '';
         const code = 'gSn7C@^7P^K4F03i';
         const url = `https://aitools.yifenqian.fr/view_sp_html?mall_id=${mallId}&brand_id=${brandId}&code=${encodeURIComponent(code)}`;
+        window.open(url, '_blank');
+    }
+
+    function onFindBrandSellingPoints(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const doc = event.target.ownerDocument;
+        const brandSelect = doc.querySelector('#brands');
+        if (!brandSelect) {
+            alert('未找到 #brands 元素');
+            return;
+        }
+        const brandId = brandSelect.value;
+        if (!brandId) {
+            alert('请先选择品牌');
+            return;
+        }
+        const code = 'gSn7C@^7P^K4F03i';
+        const url = `https://aitools.yifenqian.fr/view_brand_sp_html?brand_id=${brandId}&code=${encodeURIComponent(code)}`;
         window.open(url, '_blank');
     }
 
