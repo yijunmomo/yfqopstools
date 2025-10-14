@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ECENTIME Admin 助手
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.6
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
 // @author       You
 // @match        https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin*
