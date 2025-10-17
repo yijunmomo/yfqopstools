@@ -1,12 +1,17 @@
 // ==UserScript==
 // @name         ECENTIME Admin 助手
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      1.7
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
 // @author       You
+// @grant        GM_xmlhttpRequest
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_deleteValue
 // @match        https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin*
 // @downloadURL  https://raw.githubusercontent.com/your-org/tm-scripts/main/scripts/operations.user.js
 // @updateURL    https://raw.githubusercontent.com/your-org/tm-scripts/main/scripts/operations.user.js
+// @connect      aitools.yifenqian.fr
 // @grant        unsafeWindow
 // ==/UserScript==
 
@@ -96,6 +101,33 @@
                 brandBtn.style.width = '100%';
                 brandBtn.onclick = onFindBrandSellingPoints;
                 mallBtn.parentNode.insertBefore(brandBtn, mallBtn.nextSibling);
+
+                const chatgptBtn = doc.createElement('input');
+                //添加id为chatgpt-fill-btn
+                chatgptBtn.id = 'chatgpt-fill-btn';
+                chatgptBtn.type = 'button';
+                chatgptBtn.value = 'Chatgpt 填充';
+                chatgptBtn.style.padding = '2px 20px';
+                chatgptBtn.style.cursor = 'pointer';
+                chatgptBtn.onclick = function(event) {
+                    // 先执行ChatGPT填充功能
+                    onChatgptFill(event);
+                };
+                
+                // 将按钮放置到id为info的textarea所在的td标签的尾部
+                const infoTextarea = doc.querySelector('#info');
+                if (infoTextarea) {
+                    const infoTd = infoTextarea.closest('td');
+                    if (infoTd) {
+                        infoTd.appendChild(chatgptBtn);
+                    } else {
+                        // 如果找不到td，则使用原来的位置
+                        brandBtn.parentNode.insertBefore(chatgptBtn, brandBtn.nextSibling);
+                    }
+                } else {
+                    // 如果找不到#info textarea，则使用原来的位置
+                    brandBtn.parentNode.insertBefore(chatgptBtn, brandBtn.nextSibling);
+                }
                 
             }
 
@@ -351,6 +383,205 @@
         const code = 'gSn7C@^7P^K4F03i';
         const url = `https://aitools.yifenqian.fr/view_brand_sp_html?brand_id=${brandId}&code=${encodeURIComponent(code)}`;
         window.open(url, '_blank');
+    }
+
+    function onChatgptFill(event) {
+        event.preventDefault();
+
+        const doc = event.target.ownerDocument;
+        
+        // 创建模态框背景
+        const modalOverlay = doc.createElement('div');
+        //添加ID为chatgpt-fill-modal-overlay
+        modalOverlay.id = 'chatgpt-fill-modal-overlay';
+        modalOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        `;
+
+        // 创建模态框内容
+        const modalContent = doc.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 500px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+        `;
+
+        modalContent.innerHTML = `
+            <h3 style="margin-top: 0; margin-bottom: 15px;">ChatGPT 填充</h3>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">内容类型：</label>
+                <select id="contentType" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="backend">详情内容</option>
+                    <option value="resume_products">单品信息</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">输入内容：</label>
+                <textarea id="userInput" style="width: 100%; height: 150px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical;" placeholder="请输入要填充的内容..."></textarea>
+            </div>
+            <div style="text-align: right;">
+                <button id="cancelBtn" style="margin-right: 10px; padding: 8px 16px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 4px; cursor: pointer;">取消</button>
+                <button id="confirmBtn" style="padding: 8px 16px; border: none; background: #007bff; color: white; border-radius: 4px; cursor: pointer;">确定</button>
+            </div>
+        `;
+
+        modalOverlay.appendChild(modalContent);
+        doc.body.appendChild(modalOverlay);
+
+        // 绑定事件
+        const cancelBtn = modalContent.querySelector('#cancelBtn');
+        const confirmBtn = modalContent.querySelector('#confirmBtn');
+        const contentType = modalContent.querySelector('#contentType');
+        const userInput = modalContent.querySelector('#userInput');
+
+        // 取消按钮事件
+        cancelBtn.onclick = () => {
+            doc.body.removeChild(modalOverlay);
+        };
+
+        // 确定按钮事件
+        confirmBtn.onclick = () => {
+            const selectedType = contentType.value;
+            const inputText = userInput.value.trim();
+
+            if (!inputText) {
+                alert('请输入内容');
+                return;
+            }
+
+            // 发送请求
+            sendChatgptRequest(selectedType, inputText, doc);
+            doc.body.removeChild(modalOverlay);
+        };
+
+        // 点击背景关闭模态框
+        modalOverlay.onclick = (e) => {
+            if (e.target === modalOverlay) {
+                doc.body.removeChild(modalOverlay);
+            }
+        };
+    }
+
+    // 获取指定名称的cookie
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return parts.pop().split(';').shift();
+        }
+        return null;
+    }
+
+    function sendChatgptRequest(templateName, userInput, doc) {
+        const requestData = {
+            template_name: templateName,
+            user_input: userInput
+        };
+
+        // 显示加载状态
+        const loadingDiv = doc.createElement('div');
+        loadingDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 10001;
+        `;
+        loadingDiv.textContent = '正在处理中...';
+        doc.body.appendChild(loadingDiv);
+
+        // 获取当前网站的admin cookie
+        const adminCookie = getCookie('admin');
+        
+        const cookieParam = adminCookie ? `&token=${adminCookie}` : '';
+        
+        // 使用GM_xmlhttpRequest发送POST请求
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: `https://aitools.yifenqian.fr/chatgpt/call?code=Am4TbRp1GiZS5g!5${cookieParam}`,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            data: JSON.stringify(requestData),
+            onload: function(response) {
+                doc.body.removeChild(loadingDiv);
+                
+                if (response.status >= 200 && response.status < 300) {
+                    try {
+                        const data = JSON.parse(response.responseText);
+                        console.log('ChatGPT API 响应:', data);
+                        
+                        if (data && data.response) {
+                            try {
+                                // 解析返回的JSON字符串
+                                const responseData = JSON.parse(data.response);
+                                
+                                // 更新CKEditor内容
+                                updateCKEditorContent(responseData, doc);
+                                
+                            } catch (parseError) {
+                                console.error('解析响应数据失败:', parseError);
+                                alert('响应数据格式错误，请检查API返回内容');
+                            }
+                        } else {
+                            alert('API返回数据格式不正确');
+                        }
+                    } catch (parseError) {
+                        console.error('解析响应失败:', parseError);
+                        alert('响应数据解析失败');
+                    }
+                } else {
+                    console.error('HTTP error! status:', response.status);
+                    alert('请求失败: HTTP ' + response.status);
+                }
+            },
+            onerror: function(error) {
+                doc.body.removeChild(loadingDiv);
+                console.error('ChatGPT API 请求失败:', error);
+                alert('请求失败: ' + error.message);
+            }
+        });
+    }
+
+    function updateCKEditorContent(responseData, doc) {
+        try {
+            // 检查是否存在CKEditor实例
+            if (typeof unsafeWindow.editor === 'undefined' || !unsafeWindow.editor) {
+                alert('未找到CKEditor实例，请确保富文本编辑器已加载');
+                return;
+            }
+
+            const editor = unsafeWindow.editor;
+            
+            // 获取现有内容
+            const existingContent = editor.getData();
+           
+            // 将新内容拼接到现有内容之后
+            const combinedContent = existingContent + responseData.description;
+            editor.setData(combinedContent);
+            
+            console.log('CKEditor内容已更新:', responseData.description);
+        } catch (error) {
+            console.error('更新CKEditor内容失败:', error);
+        }
     }
 
     function onGetRelatedLinks(event) {
