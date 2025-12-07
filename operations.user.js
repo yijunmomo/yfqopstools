@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ECENTIME Admin 助手
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.9
 // @description  在包含 index.php?g=admin 的 iframe 中执行 DOM 操作
 // @author       You
 // @grant        GM_xmlhttpRequest
@@ -11,7 +11,7 @@
 // @match        https://admin.ecentime.com/yifenqian_zdm_admin/index.php?g=admin*
 // @downloadURL  https://raw.githubusercontent.com/your-org/tm-scripts/main/scripts/operations.user.js
 // @updateURL    https://raw.githubusercontent.com/your-org/tm-scripts/main/scripts/operations.user.js
-// @connect      aitools.yifenqian.fr
+// @connect      ecttools.ecentime.com
 // @grant        unsafeWindow
 // ==/UserScript==
 
@@ -227,8 +227,14 @@
                 addButton.innerText = '👆加相关链接';
                 addButton.onclick = (event) => onAddRelatedLinkClick(event, href, linkText);
 
+                const addSimpleProductButton = doc.createElement('button');
+                addSimpleProductButton.innerText = '增加相关单品';
+                addSimpleProductButton.style.marginLeft = '10px';
+                addSimpleProductButton.onclick = (e) => onAddSimpleProductClick(e, href, doc);
+
                 line.appendChild(anchor);
                 line.appendChild(addButton);
+                line.appendChild(addSimpleProductButton);
                 resultContainer.appendChild(line);
             });
         }
@@ -267,6 +273,76 @@
         <a href="javascript:void(0);" class="link_delete_btn">删除</a>
     `;
         container.appendChild(wrapper);
+    }
+
+    // 处理"增加相关单品"的点击逻辑
+    function onAddSimpleProductClick(event, linkUrl, doc) {
+        event.preventDefault(); // 阻止默认提交
+        event.stopPropagation(); // 阻止冒泡行为
+
+        // 查找 #addMoreSimpleProduct 元素
+        const addMoreSimpleProductBtn = doc.querySelector('#addMoreSimpleProduct');
+        if (!addMoreSimpleProductBtn) {
+            alert('未找到 #addMoreSimpleProduct 元素');
+            return;
+        }
+
+        // 查找 #addMoreSimpleProduct 前一个 input 元素
+        let prevInput = null;
+        
+        // 查找前一个兄弟元素（直接是input或包含input）
+        let prevSibling = addMoreSimpleProductBtn.previousElementSibling;
+        while (prevSibling) {
+            if (prevSibling.tagName === 'INPUT') {
+                prevInput = prevSibling;
+                break;
+            }
+            // 如果前一个兄弟元素包含 input，取最后一个
+            const inputsInSibling = prevSibling.querySelectorAll('input');
+            if (inputsInSibling.length > 0) {
+                prevInput = inputsInSibling[inputsInSibling.length - 1];
+                break;
+            }
+            prevSibling = prevSibling.previousElementSibling;
+        }
+
+        if (!prevInput) {
+            alert('未找到 #addMoreSimpleProduct 前一个 input 元素');
+            console.warn('查找失败，尝试查找的元素:', addMoreSimpleProductBtn);
+            return;
+        }
+
+        // 将链接URL填入 input
+        prevInput.value = linkUrl;
+        
+        // 触发 input 的 change 和 input 事件，确保页面能识别值的变化
+        const changeEvent = new Event('change', { bubbles: true });
+        const inputEvent = new Event('input', { bubbles: true });
+        prevInput.dispatchEvent(changeEvent);
+        prevInput.dispatchEvent(inputEvent);
+
+        // 触发 #addMoreSimpleProduct 的 click 事件
+        // 使用 click() 方法更可靠，兼容性更好
+        try {
+            addMoreSimpleProductBtn.click();
+        } catch (e) {
+            // 如果 click() 方法失败，尝试使用 MouseEvent
+            const view = doc.defaultView || doc.parentWindow || window;
+            const clickEvent = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: view
+            });
+            addMoreSimpleProductBtn.dispatchEvent(clickEvent);
+        }
+        try {
+            $.zhiphp.tip({
+                content: '该链接已生成单品',
+                icon: 'success'
+            });
+        } catch (e) {
+            console.log('已填入链接URL并触发点击事件:', linkUrl);
+        }
     }
 
     function onGetSingleProductLinks(event) {
@@ -361,7 +437,7 @@
         const brandSelect = doc.querySelector('#brands');
         const brandId = brandSelect ? brandSelect.value : '';
         const code = 'gSn7C@^7P^K4F03i';
-        const url = `https://aitools.yifenqian.fr/view_sp_html?mall_id=${mallId}&brand_id=${brandId}&code=${encodeURIComponent(code)}`;
+        const url = `https://ecttools.ecentime.com/view_sp_html?mall_id=${mallId}&brand_id=${brandId}&code=${encodeURIComponent(code)}`;
         window.open(url, '_blank');
     }
 
@@ -381,7 +457,7 @@
             return;
         }
         const code = 'gSn7C@^7P^K4F03i';
-        const url = `https://aitools.yifenqian.fr/view_brand_sp_html?brand_id=${brandId}&code=${encodeURIComponent(code)}`;
+        const url = `https://ecttools.ecentime.com/view_brand_sp_html?brand_id=${brandId}&code=${encodeURIComponent(code)}`;
         window.open(url, '_blank');
     }
 
@@ -516,7 +592,7 @@
         // 使用GM_xmlhttpRequest发送POST请求
         GM_xmlhttpRequest({
             method: 'POST',
-            url: `https://aitools.yifenqian.fr/chatgpt/call?code=Am4TbRp1GiZS5g!5${cookieParam}`,
+            url: `https://ecttools.ecentime.com/chatgpt/call?code=Am4TbRp1GiZS5g!5${cookieParam}`,
             headers: {
                 'Content-Type': 'application/json',
             },
